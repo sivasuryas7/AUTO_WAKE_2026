@@ -81,11 +81,12 @@ fun JourneyScreen(latitude: Double,
             ) {
 
                 remainingDistance =
-                    intent?.getFloatExtra(
-                        "distance",
-                        0f
-                    ) ?: 0f
+                    intent?.getFloatExtra("distance", 0f) ?: 0f
 
+                android.util.Log.d(
+                    "AUTO_WAKE",
+                    "JourneyScreen received distance = $remainingDistance"
+                )
             }
 
         }

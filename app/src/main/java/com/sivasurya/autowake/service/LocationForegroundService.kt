@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.*
@@ -17,51 +18,46 @@ import com.sivasurya.autowake.helpers.VibrationHelper
 
 class LocationForegroundService : Service() {
 
-
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-
     private lateinit var locationCallback: LocationCallback
-
 
     private var destinationLatitude = 0.0
     private var destinationLongitude = 0.0
 
-
     private val destinationRadius = 100f // meters
 
-
-
     override fun onCreate() {
-        android.util.Log.d(
-            "AUTO_WAKE",
-            "Service Created"
-        )
+
         super.onCreate()
 
-        // Create notification channel first
-        NotificationHelper.createNotificationChannel(this)
+        Log.d("AUTO_WAKE", "Service Created")
 
+        NotificationHelper.createNotificationChannel(this)
 
         fusedLocationClient =
             LocationServices.getFusedLocationProviderClient(this)
 
-
         locationCallback =
             object : LocationCallback() {
 
-                override fun onLocationResult(
-                    result: LocationResult
-                ) {
+                override fun onLocationResult(result: LocationResult) {
 
-                    for(location in result.locations){
+                    Log.d(
+                        "AUTO_WAKE",
+                        "Received ${result.locations.size} location update(s)"
+                    )
+
+                    for (location in result.locations) {
+
+                        Log.d(
+                            "AUTO_WAKE",
+                            "Current Location -> Lat: ${location.latitude}, Lon: ${location.longitude}"
+                        )
 
                         checkDestination(location)
-
                     }
-
                 }
             }
-
 
         val notification: Notification =
             NotificationCompat.Builder(
@@ -69,15 +65,10 @@ class LocationForegroundService : Service() {
                 NotificationHelper.CHANNEL_ID
             )
                 .setContentTitle("AUTO WAKE")
-                .setContentText(
-                    "Monitoring your destination..."
-                )
-                .setSmallIcon(
-                    R.mipmap.ic_launcher
-                )
+                .setContentText("Monitoring your destination...")
+                .setSmallIcon(R.mipmap.ic_launcher)
                 .setOngoing(true)
                 .build()
-
 
         startForeground(
             1001,
@@ -85,59 +76,43 @@ class LocationForegroundService : Service() {
         )
     }
 
-
-
     override fun onStartCommand(
         intent: Intent?,
         flags: Int,
         startId: Int
     ): Int {
 
-        android.util.Log.d(
-            "AUTO_WAKE",
-            "Service Started"
-        )
+        Log.d("AUTO_WAKE", "Service Started")
+
         destinationLatitude =
-            intent?.getDoubleExtra(
-                "latitude",
-                0.0
-            ) ?: 0.0
-
-
+            intent?.getDoubleExtra("latitude", 0.0) ?: 0.0
 
         destinationLongitude =
-            intent?.getDoubleExtra(
-                "longitude",
-                0.0
-            ) ?: 0.0
+            intent?.getDoubleExtra("longitude", 0.0) ?: 0.0
 
+        Log.d(
+            "AUTO_WAKE",
+            "Destination -> Lat: $destinationLatitude, Lon: $destinationLongitude"
+        )
 
-
-        if(
+        if (
             destinationLatitude != 0.0 &&
             destinationLongitude != 0.0
-        ){
+        ) {
 
             startLocationUpdates()
 
-        }
-        else{
+        } else {
 
+            Log.d("AUTO_WAKE", "Invalid destination. Stopping service.")
             stopSelf()
 
         }
 
-
-
         return START_STICKY
     }
 
-
-
-
-
-    private fun startLocationUpdates(){
-
+    private fun startLocationUpdates() {
 
         val locationRequest =
             LocationRequest.Builder(
@@ -147,110 +122,84 @@ class LocationForegroundService : Service() {
                 .setMinUpdateDistanceMeters(5f)
                 .build()
 
-
-
-        if(
+        if (
             ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
-            )
-            != PackageManager.PERMISSION_GRANTED
-        ){
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+
+            Log.d("AUTO_WAKE", "Location permission NOT granted")
 
             stopSelf()
             return
-
         }
 
-
+        Log.d("AUTO_WAKE", "Starting location updates...")
 
         fusedLocationClient.requestLocationUpdates(
             locationRequest,
             locationCallback,
             mainLooper
         )
-
     }
-
-
-
-
 
     private fun checkDestination(
         currentLocation: Location
-    ){
+    ) {
 
+        val destination = Location("destination").apply {
+            latitude = destinationLatitude
+            longitude = destinationLongitude
+        }
 
-        val destination =
-            Location("destination")
+        val distance = currentLocation.distanceTo(destination)
 
+        Log.d(
+            "AUTO_WAKE",
+            "Distance to destination = $distance meters"
+        )
 
-
-        destination.latitude =
-            destinationLatitude
-
-
-        destination.longitude =
-            destinationLongitude
-
-
-
-        val distance =
-            currentLocation.distanceTo(destination)
-
-
-        val distanceIntent = Intent("DISTANCE_UPDATE").apply {
+        val distanceIntent = Intent().apply {
+            action = "DISTANCE_UPDATE"
+            setPackage(packageName)
             putExtra("distance", distance)
         }
 
         sendBroadcast(distanceIntent)
-        if(distance <= destinationRadius){
+
+        sendBroadcast(distanceIntent)
+
+        Log.d("AUTO_WAKE", "Distance broadcast sent")
+
+        if (distance <= destinationRadius) {
+
+            Log.d("AUTO_WAKE", "Destination Reached!")
 
             destinationReached()
-
         }
-
     }
-
-
-
-
 
     private fun destinationReached() {
 
-        // Stop receiving location updates
         fusedLocationClient.removeLocationUpdates(locationCallback)
 
-        // Start alarm and vibration
         AlarmHelper.playAlarm(this)
         VibrationHelper.start(this)
 
-        // Stop location tracking service
         stopSelf()
     }
 
     override fun onDestroy() {
 
-        android.util.Log.d(
-            "AUTO_WAKE",
-            "Service Destroyed"
-        )
+        Log.d("AUTO_WAKE", "Service Destroyed")
 
-
-        fusedLocationClient.removeLocationUpdates(
-            locationCallback
-        )
-
+        fusedLocationClient.removeLocationUpdates(locationCallback)
 
         super.onDestroy()
     }
 
-    override fun onBind(
-        intent: Intent?
-    ): IBinder? {
-
+    override fun onBind(intent: Intent?): IBinder? {
         return null
-
     }
-
 }
