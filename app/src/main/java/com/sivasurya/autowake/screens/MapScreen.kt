@@ -1,11 +1,9 @@
 package com.sivasurya.autowake.screens
 
 import android.annotation.SuppressLint
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
@@ -71,9 +69,37 @@ fun MapScreen(navController: NavController) {
 
         )
 
-        // Crosshair
+        Card(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 5.dp)
+        ) {
+
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+
+                Text(
+                    text = "Select Destination",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Move the map and keep the crosshair on your destination.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+            }
+
+        }
+
         Text(
             text = "✚",
+            style = MaterialTheme.typography.headlineLarge,
             modifier = Modifier.align(Alignment.Center)
         )
 
@@ -95,10 +121,16 @@ fun MapScreen(navController: NavController) {
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(20.dp)
+                .fillMaxWidth(0.9f)
+                .height(56.dp),
+
+            shape = RoundedCornerShape(16.dp)
 
         ) {
 
-            Text("Select This Location")
+            Text(
+                text = "Select This Location"
+            )
 
         }
 

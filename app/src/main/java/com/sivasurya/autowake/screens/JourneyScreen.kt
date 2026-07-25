@@ -1,35 +1,38 @@
 package com.sivasurya.autowake.screens
 
 import android.Manifest
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.sivasurya.autowake.service.LocationForegroundService
-import android.os.Build
 import com.sivasurya.autowake.helpers.AlarmHelper
+import com.sivasurya.autowake.helpers.JourneyState
 import com.sivasurya.autowake.helpers.VibrationHelper
-import android.content.BroadcastReceiver
-import android.content.IntentFilter
-import android.content.Context
-import org.osmdroid.views.overlay.MapEventsOverlay
-import org.osmdroid.events.MapEventsReceiver
+import com.sivasurya.autowake.service.LocationForegroundService
+
 
 @Composable
-fun JourneyScreen(latitude: Double,
-                  longitude: Double) {
-
+fun JourneyScreen(
+    latitude: Double,
+    longitude: Double
+) {
 
     val context = LocalContext.current
+
     var remainingDistance by remember {
         mutableStateOf(0f)
     }
@@ -44,33 +47,31 @@ fun JourneyScreen(latitude: Double,
             ActivityResultContracts.RequestPermission()
         ) { isGranted ->
 
-            if(isGranted){
-                message = "Notification Permission Granted"
-            }
-            else{
-                message = "Notification Permission Denied"
-            }
+            message =
+                if (isGranted)
+                    "Notification Permission Granted"
+                else
+                    "Notification Permission Denied"
 
         }
+
+
+
     val permissionLauncher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { isGranted ->
 
-            if(isGranted){
-
-                message =
+            message =
+                if (isGranted)
                     "Permission Granted. Press Start Journey Again."
-
-            }
-            else{
-
-                message =
+                else
                     "Location Permission Denied"
 
-            }
-
         }
+
+
+
     DisposableEffect(Unit) {
 
         val receiver = object : BroadcastReceiver() {
@@ -81,34 +82,52 @@ fun JourneyScreen(latitude: Double,
             ) {
 
                 remainingDistance =
-                    intent?.getFloatExtra("distance", 0f) ?: 0f
+                    intent?.getFloatExtra(
+                        "distance",
+                        0f
+                    ) ?: 0f
+
 
                 android.util.Log.d(
                     "AUTO_WAKE",
-                    "JourneyScreen received distance = $remainingDistance"
+                    "Distance = $remainingDistance"
                 )
+
             }
 
         }
 
+
+
         val filter = IntentFilter("DISTANCE_UPDATE")
 
+
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+
             context.registerReceiver(
                 receiver,
                 filter,
                 Context.RECEIVER_NOT_EXPORTED
             )
+
         } else {
+
             @Suppress("DEPRECATION")
             context.registerReceiver(
                 receiver,
-                filter
+                filter,
+                Context.RECEIVER_NOT_EXPORTED
             )
+
         }
 
+
+
         onDispose {
+
             context.unregisterReceiver(receiver)
+
         }
 
     }
@@ -116,88 +135,135 @@ fun JourneyScreen(latitude: Double,
 
 
 
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .padding(20.dp)
     ) {
 
 
         Text(
-            text = "Journey Ready",
-            fontSize = 30.sp
-        )
-
-
-        Spacer(
-            modifier = Modifier.height(20.dp)
+            text = "Journey Tracking",
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Bold
         )
 
 
         Text(
-            text = "Selected Destination",
-            fontSize = 20.sp
+            text = "AUTO WAKE is monitoring your journey.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
 
 
-        Spacer(
-            modifier = Modifier.height(20.dp)
-        )
+        Spacer(modifier = Modifier.height(20.dp))
 
 
-        Text(
-            text = "Destination Latitude : $latitude"
-        )
 
-        Text(
-            text = "Destination Longitude : $longitude"
-        )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        ) {
 
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
 
-        Spacer(
-            modifier = Modifier.height(20.dp)
-        )
+                Text(
+                    "Destination",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
 
+                Spacer(modifier = Modifier.height(8.dp))
 
-        Text(
-            text = message,
-            fontSize = 18.sp
-        )
+                Text("Latitude : $latitude")
+                Text("Longitude : $longitude")
 
-        Spacer(
-            modifier = Modifier.height(12.dp)
-        )
+            }
 
-        Text(
-            text = String.format(
-                "Remaining Distance : %.2f km",
-                remainingDistance / 1000
-            ),
-            fontSize = 20.sp
-        )
+        }
 
 
-        Spacer(
-            modifier = Modifier.height(30.dp)
-        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+
+                Text(
+                    "Remaining Distance",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    String.format(
+                        "%.2f km",
+                        remainingDistance / 1000
+                    ),
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+            }
+
+        }
+
+
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+
+                Text(
+                    "Status",
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(message)
+
+            }
+
+        }
+
+
+
+        Spacer(modifier = Modifier.weight(1f))
 
 
 
         Button(
-
             onClick = {
 
-
-                if(
+                if (
                     ContextCompat.checkSelfPermission(
                         context,
                         Manifest.permission.ACCESS_FINE_LOCATION
-                    )
-                    == PackageManager.PERMISSION_GRANTED
-                ){
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
 
 
                     val serviceIntent =
@@ -205,7 +271,6 @@ fun JourneyScreen(latitude: Double,
                             context,
                             LocationForegroundService::class.java
                         ).apply {
-
 
                             putExtra(
                                 "latitude",
@@ -222,25 +287,25 @@ fun JourneyScreen(latitude: Double,
                                 "Selected Destination"
                             )
 
-
                         }
 
 
 
-                    if(
+                    if (
                         Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                         ContextCompat.checkSelfPermission(
                             context,
                             Manifest.permission.POST_NOTIFICATIONS
                         ) != PackageManager.PERMISSION_GRANTED
-                    ){
+                    ) {
+
 
                         notificationPermissionLauncher.launch(
                             Manifest.permission.POST_NOTIFICATIONS
                         )
 
-                    }
-                    else{
+
+                    } else {
 
 
                         ContextCompat.startForegroundService(
@@ -249,33 +314,45 @@ fun JourneyScreen(latitude: Double,
                         )
 
 
-                        message =
-                            "Journey Started"
+                        JourneyState.isJourneyActive = true
+
+                        JourneyState.destinationName =
+                            "Selected Destination"
+
+
+                        message = "Journey Started"
 
                     }
 
 
-                }
-                else{
-
+                } else {
 
                     permissionLauncher.launch(
                         Manifest.permission.ACCESS_FINE_LOCATION
                     )
 
-
                 }
-
 
             },
 
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
 
-        ){
+            shape = RoundedCornerShape(16.dp)
+
+        ) {
 
             Text("Start Journey")
 
         }
+
+
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+
+
         Button(
             onClick = {
 
@@ -285,7 +362,13 @@ fun JourneyScreen(latitude: Double,
                 message = "Alarm Stopped"
 
             },
-            modifier = Modifier.fillMaxWidth()
+
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+
+            shape = RoundedCornerShape(16.dp)
+
         ) {
 
             Text("Stop Alarm")
@@ -294,17 +377,12 @@ fun JourneyScreen(latitude: Double,
 
 
 
-        Spacer(
-            modifier = Modifier.height(16.dp)
-        )
-
+        Spacer(modifier = Modifier.height(12.dp))
 
 
 
         OutlinedButton(
-
             onClick = {
-
 
                 context.stopService(
                     Intent(
@@ -313,22 +391,16 @@ fun JourneyScreen(latitude: Double,
                     )
                 )
 
-
-                message =
-                    "Journey Stopped"
-
-
+                JourneyState.isJourneyActive = false
+                JourneyState.destinationName = ""
+                message = "Journey Stopped"
             },
-
-            modifier = Modifier.fillMaxWidth()
-
-        ){
-
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
             Text("Stop Journey")
-
         }
-
-
     }
-
 }

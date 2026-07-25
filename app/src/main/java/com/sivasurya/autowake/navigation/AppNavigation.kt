@@ -1,9 +1,11 @@
 package com.sivasurya.autowake.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.sivasurya.autowake.screens.DestinationScreen
 import com.sivasurya.autowake.screens.HomeScreen
 import com.sivasurya.autowake.screens.JourneyScreen
@@ -27,8 +29,20 @@ fun AppNavigation() {
             DestinationScreen(navController)
         }
 
+        composable(Screen.Map.route) {
+            MapScreen(navController)
+        }
+
         composable(
-            route = Screen.Journey.route
+            route = Screen.Journey.route,
+            arguments = listOf(
+                navArgument("lat") {
+                    type = NavType.StringType
+                },
+                navArgument("lon") {
+                    type = NavType.StringType
+                }
+            )
         ) { backStackEntry ->
 
             val lat = backStackEntry.arguments
@@ -45,9 +59,6 @@ fun AppNavigation() {
             )
         }
 
-        composable(Screen.Map.route) {
-            MapScreen(navController)
-        }
-
     }
+
 }
